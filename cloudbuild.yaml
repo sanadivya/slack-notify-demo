@@ -3,7 +3,7 @@ options:
 
 availableSecrets:
   secretManager:
-    - versionName: projects/articulate-area-464808-q4/secrets/slack-webhook-url/versions/latest
+    - versionName: projects/articulate-area-464808-q4/secrets/SLACK_WEBHOOK_URL/versions/latest
       env: SLACK_WEBHOOK_URL
 
 steps:
@@ -21,5 +21,5 @@ steps:
       - |
         curl -X POST -H 'Content-type: application/json' \
           --data '{"text":"✅ *Build SUCCESS* for sample-app in project *articulate-area-464808-q4*."}' \
-          "$SLACK_WEBHOOK_URL"
+          "$$SLACK_WEBHOOK_URL"
 
