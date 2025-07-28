@@ -15,6 +15,7 @@ steps:
 
   - name: 'curlimages/curl'
     id: notify-success
+    secretEnv: ['SLACK_WEBHOOK_URL']
     entrypoint: 'sh'
     args:
       - '-c'
