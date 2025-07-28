@@ -23,16 +23,3 @@ steps:
           --data '{"text":"✅ *Build SUCCESS* for sample-app in project *articulate-area-464808-q4*."}' \
           "$SLACK_WEBHOOK_URL"
 
-timeout: 900s
-
-failure:
-  steps:
-    - name: 'curlimages/curl'
-      id: notify-failure
-      entrypoint: 'sh'
-      args:
-        - '-c'
-        - |
-          curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":"❌ *Build FAILED* for sample-app in project *articulate-area-464808-q4*."}' \
-            "$SLACK_WEBHOOK_URL"
