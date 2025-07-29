@@ -18,20 +18,10 @@ steps:
     secretEnv: ['SLACK_WEBHOOK_URL']
     entrypoint: 'sh'
     args:
-      - '-c'    
+      - '-c'
       - |
         curl -X POST -H "Content-Type: application/json" \
           -d "{
-                \"@type\": \"MessageCard\",
-                \"@context\": \"http://schema.org/extensions\",
-                \"summary\": \"Deployment Notification\",
-                \"themeColor\": \"00FF00\",
-                \"title\": \"✅ New version deployed to BE ${_ENV} environment\",
-                \"sections\": [
-                  {
-                    \"activityTitle\": \"Status\",
-                    \"text\": \"Deployment completed successfully.\"
-                  }
-                ]
+                \"text\": \"✅ New version deployed to BE ${_ENV} environment.\"
               }" \
-            "$$SLACK_WEBHOOK_URL"
+          "$$SLACK_WEBHOOK_URL"
