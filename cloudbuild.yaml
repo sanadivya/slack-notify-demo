@@ -22,6 +22,6 @@ steps:
       - |
         curl -X POST -H "Content-Type: application/json" \
           -d "{
-                \"text\": \"✅ New version deployed to BE ${_ENV} environment.\"
+                \"text\": \"✅ New version deployed to BE environment.\"
               }" \
           "$$SLACK_WEBHOOK_URL"
