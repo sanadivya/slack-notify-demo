@@ -51,7 +51,7 @@ steps:
                     "title": "✅ New version deployed to BE environment",
                     "text": "*Deployment Details:*\n\n*Environment:* '"dev"'\n*Project:* *articulate-area-464808-q4*\n*Service:* *gitinfo-demo*\n*Version:* *'"${SHORT_SHA}"'*",
                     "footer": "Cloud Build • '"dev"'",
-                    "ts": '"${TIMESTAMP}"',
+                    "ts": '"$${TIMESTAMP}"',
                     "mrkdwn_in": ["text", "title", "footer"]
                   }
                 ]
