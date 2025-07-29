@@ -16,11 +16,22 @@ steps:
   - name: 'curlimages/curl'
     id: notify-success
     secretEnv: ['SLACK_WEBHOOK_URL']
-    entrypoint: 'sh'
+    entrypoint: 'bash'
     args:
-      - '-c'
+      - '-c'    
       - |
-        curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":"✅ *Build SUCCESS* for sample-app in project *articulate-area-464808-q4*."}' \
-          "$$SLACK_WEBHOOK_URL"
-
+        curl -X POST -H "Content-Type: application/json" \
+          -d "{
+                \"@type\": \"MessageCard\",
+                \"@context\": \"http://schema.org/extensions\",
+                \"summary\": \"Deployment Notification\",
+                \"themeColor\": \"00FF00\",
+                \"title\": \"✅ New version deployed to BE ${_ENV} environment\",
+                \"sections\": [
+                  {
+                    \"activityTitle\": \"Status\",
+                    \"text\": \"Deployment completed successfully.\"
+                  }
+                ]
+              }" \
+            "$$SLACK_WEBHOOK_URL"
