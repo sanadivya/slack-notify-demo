@@ -21,7 +21,7 @@ steps:
       - '-c'
       - |
         curl -X POST -H "Content-Type: application/json" \
-          -d "{
-                \"text\": \"✅ New version deployed to BE environment.\"
-              }" \
-          "$$SLACK_WEBHOOK_URL"
+        --data "{
+          \"text\": \"✅ New version deployed to BE environment\n\n*Deployment Details*\nEnvironment: dev \nProject: articulate-area-464808-q4\nService: gitinfo-demo\nVersion: ${SHORT_SHA}\"
+        }" \
+        "$$SLACK_WEBHOOK_URL"
