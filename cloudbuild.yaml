@@ -12,22 +12,6 @@ steps:
 
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'asia-south1-docker.pkg.dev/articulate-area-464808-q4/slack-notify/sample-app']
-
-  - name: 'curlimages/curl'
-    id: notify-success
-    secretEnv: ['SLACK_WEBHOOK_URL']
-    entrypoint: 'sh'
-    args:
-      - '-c'
-      - |
-        curl -X POST -H "Content-Type: application/json" \
-          -d "{
-                \"color\": \"#36a64f\",
-                \"title\": \"✅ New version deployed to BE environment\",
-                \"text\": \"*Deployment Details*\n\n*Environment:* ${_ENV}\n*Project:* articulate-area-464808-q4\n*Service:* gitinfo-demo\n*Version:* ${SHORT_SHA}\"
-          }" \
-          "$$SLACK_WEBHOOK_URL"
-
               
   - name: 'curlimages/curl'
     id: notify-success
