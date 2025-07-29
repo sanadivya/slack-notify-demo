@@ -21,14 +21,14 @@ steps:
       - '-c'
       - |
         curl -X POST -H "Content-Type: application/json" \
-          -d "{
-                \"attachments\": [
+          -d '{
+                "attachments": [
                   {
-                    \"color\": \"#36a64f\",
-                    \"title\": \"✅ New version deployed to BE environment\",
-                    \"text\": \"*Deployment Details:*\n\n*Environment:* *dev*\n*Project:* *articulate-area-464808-q4*\n*Service:* *gitinfo-demo*\n*Version:* *${SHORT_SHA}*\",
-                    \"mrkdwn_in\": [\"text\", \"title\"]
+                    "color": "#36a64f",
+                    "title": "✅ New version deployed to BE environment",
+                    "text": "*Deployment Details:*\n\n*Environment:* '"dev"'\n*Project:* *articulate-area-464808-q4*\n*Service:* *gitinfo-demo*\n*Version:* '"${SHORT_SHA}"'",
+                    "mrkdwn_in": ["text", "title"]
                   }
                 ]
-              }" \
-          \"$SLACK_WEBHOOK_URL\"
+              }' \
+          "$$SLACK_WEBHOOK_URL"
