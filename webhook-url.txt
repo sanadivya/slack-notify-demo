@@ -25,3 +25,30 @@
                         ]
                     }' \
                 "$$SLACK_WEBHOOK_URL"
+
+
+      - name: 'ubuntu'
+        id: notify-success
+        secretEnv: ['SLACK_WEBHOOK_URL']
+        entrypoint: 'bash'
+        args:
+          - -c
+          - |
+            echo "📢 Sending Slack notification..."
+            apt-get update && apt-get install -y curl
+            TIMESTAMP=$(date +%s)
+
+            curl -X POST -H "Content-Type: application/json" \
+              -d '{
+                    "attachments": [
+                      {
+                        "color": "#36a64f",
+                        "title": "✅ New version deployed to BE environment",
+                        "text": "*Deployment Details:*\n\n*Environment:* 'dev'\n*Project:* *articulate-area-464808-q4*\n*Service:* *gitinfo-demo*\n*Version:* *'"${SHORT_SHA}"'*",
+                        "footer": "Cloud Build • 'dev'",
+                        "ts": '"$${TIMESTAMP}"',
+                        "mrkdwn_in": ["text", "title", "footer"]
+                      }
+                    ]
+                  }' \
+              "$$SLACK_WEBHOOK_URL"
