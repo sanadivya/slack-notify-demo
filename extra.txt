@@ -46,3 +46,6 @@ if [ "$$PR_DESCRIPTION" = "null" ] || [ -z "$$PR_DESCRIPTION" ]; then
           "$$SLACK_WEBHOOK_URL"
 
         fi
+
+
+#           ESCAPED_DETAILS=$(printf '%s' "$${DETAILS}" | jq -R | jq -s -r 'join("\\n")')

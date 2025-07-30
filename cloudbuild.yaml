@@ -106,7 +106,6 @@ steps:
             PR_DESCRIPTION_FORMATTED=$(echo "$${PR_DESCRIPTION}" | sed 's/^/  /' | sed ':a;N;$!ba;s/\n/\\n/g')
 
             DETAILS="\n*PR Details:*\n\n*PR Title:* $${PR_TITLE}\n*PR Number:* #$${PR_NUMBER}\n*PR Description:*\n$${PR_DESCRIPTION_FORMATTED}\n*PR Author:* $${PR_AUTHOR_NAME}"
-            ESCAPED_DETAILS=$(printf '%s' "$${DETAILS}" | jq -R | jq -s -r 'join("\\n")')
 
             GIT_INFO_SECTION="{
               \"activityTitle\": \"PR Details\",
@@ -125,7 +124,7 @@ steps:
                   {
                     "color": "#36a64f",
                     "title": "✅ New version deployed to BE '"${_ENV}"' environment",
-                    "text": "*Deployment Details:*\n\n*Environment:* ${_ENV}\n*Project:* ${_PROJECT_ID}\n*Service:* ${_SERVICE_NAME}\n*Version:* ${SHORT_SHA} '$${GIT_INFO_SECTION}'",
+                    "text": "*Deployment Details:*\n\n*Environment:* ${_ENV}\n*Project:* ${_PROJECT_ID}\n*Service:* ${_SERVICE_NAME}\n*Version:* ${SHORT_SHA}$${GIT_INFO_SECTION}",
                     "footer": "'"${_SERVICE_NAME}"'  • '"${_ENV}"'",
                     "ts": '"$${TIMESTAMP}"',
                     "mrkdwn_in": ["text", "title", "footer"]
