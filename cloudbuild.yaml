@@ -5,6 +5,10 @@ availableSecrets:
   secretManager:
     - versionName: projects/articulate-area-464808-q4/secrets/SLACK_WEBHOOK_URL/versions/latest
       env: SLACK_WEBHOOK_URL
+    - versionName: projects/articulate-area-464808-q4/secrets/SLACK_GITHUB_TOKEN/versions/latest
+      env: SLACK_GITHUB_TOKEN
+    - versionName: projects/articulate-area-464808-q4/secrets/SLACK_WEBHOOK_URL_FAILURE/versions/latest
+      env: SLACK_WEBHOOK_URL_FAILURE
 
 steps:
   - id: "Build"
