@@ -7,10 +7,12 @@ availableSecrets:
       env: SLACK_WEBHOOK_URL
 
 steps:
-  - name: 'gcr.io/cloud-builders/docker'
+  - id: "Build"
+    name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'asia-south1-docker.pkg.dev/articulate-area-464808-q4/slack-notify/sample-app', '.']
 
-  - name: 'gcr.io/cloud-builders/docker'
+  - id: "Push"
+    name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'asia-south1-docker.pkg.dev/articulate-area-464808-q4/slack-notify/sample-app']
 
   - name: "ubuntu"
