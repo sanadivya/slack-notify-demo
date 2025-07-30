@@ -125,7 +125,7 @@ steps:
               {
                 \"color\": \"#36a64f\",
                 \"title\": \"✅ New version deployed to BE ${_ENV} environment\",
-                \"text\": \"${DEPLOYMENT_TEXT}\",
+                \"text\": \"${GIT_INFO_SECTION}\",
                 \"footer\": \"${_SERVICE_NAME} • ${_ENV}\",
                 \"ts\": ${TIMESTAMP},
                 \"mrkdwn_in\": [\"text\", \"title\", \"footer\"]
