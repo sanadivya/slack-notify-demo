@@ -109,7 +109,7 @@ steps:
 
             GIT_INFO_SECTION="{
               \"activityTitle\": \"PR Details\",
-              \"text\": \"$${ESCAPED_DETAILS}\"
+              \"text\": \"$${DETAILS}\"
             },"
             
           else
