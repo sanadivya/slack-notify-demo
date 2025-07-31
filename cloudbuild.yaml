@@ -13,7 +13,7 @@ availableSecrets:
   secretManager:
     - versionName: projects/articulate-area-464808-q4/secrets/SLACK_WEBHOOK_URL/versions/latest
       env: SLACK_WEBHOOK_URL
-    - versionName: projects/articulate-area-464808-q4/secrets/SLACK_SLACK_GITHUB_TOKEN/versions/latest
+    - versionName: projects/articulate-area-464808-q4/secrets/SLACK_GITHUB_TOKEN/versions/latest
       env: SLACK_GITHUB_TOKEN
     - versionName: projects/articulate-area-464808-q4/secrets/SLACK_WEBHOOK_URL_FAILURE/versions/latest
       env: SLACK_WEBHOOK_URL_FAILURE
@@ -41,6 +41,12 @@ steps:
         apt-get update && apt-get install -y curl jq git
 
         COMMIT_SHA=$(git rev-parse HEAD)
+
+        BEFORE_SHA=$$GITHUB_EVENT_BEFORE
+        AFTER_SHA=$$GITHUB_SHA
+        
+        echo "$$GITHUB_EVENT_BEFORE"
+        echo "$$GITHUB_SHA"
 
         echo "Fetching commit info..."
         COMMIT_API="https://api.github.com/repos/sanadivya/slack-notify-demo/commits/$$COMMIT_SHA"
