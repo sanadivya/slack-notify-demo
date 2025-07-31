@@ -43,11 +43,11 @@ steps:
 
         COMMIT_SHA=$(git rev-parse HEAD)
 
-        BEFORE_SHA=$$GITHUB_EVENT_BEFORE
-        AFTER_SHA=$$GITHUB_SHA
+        AFTER_SHA=$(git rev-parse HEAD)
+        BEFORE_SHA=$(git rev-parse HEAD^)
         
-        echo "$$GITHUB_EVENT_BEFORE"
-        echo "$$GITHUB_SHA"
+        echo "$$AFTER_SHA"
+        echo "$$BEFORE_SHA"
 
         echo "Fetching commit info..."
         COMMIT_API="https://api.github.com/repos/sanadivya/slack-notify-demo/commits/$$COMMIT_SHA"
