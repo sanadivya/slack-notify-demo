@@ -112,7 +112,43 @@ steps:
 
             PR_DESCRIPTION_FORMATTED=$(echo "$${PR_DESCRIPTION}" | sed 's/^/  /' | sed ':a;N;$!ba;s/\n/\\n/g')
 
-            if [ "$$LATEST_PR_DATA" != "null" ]; then
+            DETAILS="*PR Title*: $$PR_TITLE\n*PR Number*: #$$PR_NUMBER\n*PR Description*:\n$$PR_DESCRIPTION_FORMATTED\n*PR Author*: $$PR_AUTHOR_NAME"
+            ESCAPED_DETAILS=$(printf '%s' "$$DETAILS" | jq -R | jq -s -r 'join("\\n")')
+
+            GIT_INFO_SECTION="{
+              \"blocks\": [
+                {
+                  \"type\": \"section\",
+                  \"text\": {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*PR Details*\n$$ESCAPED_DETAILS\"
+                  }
+                }
+              ]
+            }"
+
+          else
+            GIT_INFO_SECTION=""
+            DETAILS=""
+          fi
+
+          TIMESTAMP=$(date +%s)
+          curl -X POST -H "Content-Type: application/json" \
+          -d '{
+                "attachments": [
+                  {
+                    "color": "#36a64f",
+                    "title": "✅ New version deployed to BE '"${_ENV}"' environment",
+                    "text": "*Deployment Details:*\n\n*Environment:* '"${_ENV}"'\n*Project:* '"${_PROJECT_ID}"'\n*Service:* '"${_SERVICE_NAME}"'\n*Version:* '"${SHORT_SHA}"'\n\n$${GIT_INFO_SECTION}",
+                    "footer": "'"${_SERVICE_NAME}"'  • '"${_ENV}"'",
+                    "ts": '"$${TIMESTAMP}"',
+                    "mrkdwn_in": ["text", "title", "footer"]
+                  }
+                ]
+              }' \
+          "$$SLACK_WEBHOOK_URL"
+
+          if [ "$$LATEST_PR_DATA" != "null" ]; then
               DETAILS="*PR Title*: $$PR_TITLE\n*PR Number*: #$$PR_NUMBER\n*PR Description*:\n$$PR_DESCRIPTION_FORMATTED\n*PR Author*: $$PR_AUTHOR_NAME"
               ESCAPED_DETAILS=$(printf '%s' "$$DETAILS" | jq -R | jq -s -r 'join("\\n")')
 
@@ -148,13 +184,15 @@ steps:
                     "type": "mrkdwn",
                     "text": "*Deployment Details:*\n*Environment:* ${_ENV}\n*Project:* ${_PROJECT_ID}\n*Service:* ${_SERVICE_NAME}\n*Version:* ${SHORT_SHA}"
                   }
-                }$${GIT_INFO_SECTION:+,
-                $$GIT_INFO_SECTION}
+                }${GIT_INFO_SECTION:+,
+                $GIT_INFO_SECTION}
               ]
             }
             EOF
 
+            # Send to Slack
             curl -X POST -H "Content-Type: application/json" \
-                -d "$$PAYLOAD" \
-                "$$SLACK_WEBHOOK_URL"
+                -d "$PAYLOAD" \
+                "$SLACK_WEBHOOK_URL"
+
         fi
