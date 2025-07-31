@@ -79,7 +79,7 @@ steps:
             PR_AUTHOR_NAME="@$${PR_AUTHOR_LOGIN}"
           fi
 
-          MESSAGE="✅ *Build succeeded for PR #$${PR_NUMBER}* in \n*Title:* ${PR_TITLE}\n*Author:* ${PR_AUTHOR_NAME}\n*Description:*\n${PR_BODY}"
+          MESSAGE="✅ *Build succeeded for PR #$${PR_NUMBER}* in \n*Title:* $${PR_TITLE}\n*Author:* $${PR_AUTHOR_NAME}\n*Description:*\n$${PR_BODY}"
         else
           MESSAGE="✅ *Build succeeded for commit:* \`${COMMIT_SHA}\` in \`${REPO_NAME}\`"
         fi
