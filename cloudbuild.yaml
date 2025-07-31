@@ -69,4 +69,4 @@ steps:
 
         echo "$$PR_DATA"
 
-        PR_TOTAL_COUNT=$(echo "$$PR_DATA" | jq -r '.total_count')
+        PR_COUNT=$(echo "$$PR_DATA" | jq 'length')
