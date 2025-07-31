@@ -154,3 +154,68 @@ steps:
                 -d "$$PAYLOAD" \
                 "$$SLACK_WEBHOOK_URL"
         fi
+     
+
+  - name: "ubuntu"
+    id: Notify
+    entrypoint: "bash"
+    waitFor: ["Build", "Push"]
+    secretEnv:
+      ["SLACK_GITHUB_TOKEN", "SLACK_WEBHOOK_URL", "SLACK_WEBHOOK_URL_FAILURE"]
+    args:
+      - '-c'
+      - |
+        set -x
+
+        echo "🔍 Setting up...
+        echo "📦 Installing curl jq..."
+        apt-get update && apt-get install -y curl jq git
+
+        COMMIT_SHA=$(git rev-parse HEAD)
+
+        AFTER_SHA=$(git rev-parse HEAD)
+        BEFORE_SHA=$(git rev-parse HEAD^)
+        
+        echo "$$AFTER_SHA"
+        echo "$$BEFORE_SHA"
+
+        echo "Fetching commit info..."
+        COMMIT_API="https://api.github.com/repos/sanadivya/slack-notify-demo/commits/$$COMMIT_SHA"
+        COMMIT_DATA=$(curl -s -H "Authorization: token $$SLACK_GITHUB_TOKEN" "$$COMMIT_API")
+        COMMIT_MESSAGE=$(echo "$$COMMIT_DATA" | jq -r '.commit.message')
+        COMMIT_AUTHOR=$(echo "$$COMMIT_DATA" | jq -r '.commit.author.name')
+
+        echo "📣 Sending slack notification..."
+
+        echo "🔍 Detecting merged PR for commit: $$COMMIT_SHA"
+
+        # Get PR info from GitHub API using commit SHA
+        PR_DATA=$(curl -s -H "Authorization: token $${GITHUB_TOKEN}" \
+          "https://api.github.com/search/issues?q=$${COMMIT_SHA}+repo:sanadivya/slack-notify-demo+type:pr")
+
+        PR_TOTAL_COUNT=$(echo "$$PR_DATA" | jq -r '.total_count')
+
+        if [ "$$PR_TOTAL_COUNT" -gt 0 ]; then
+          PR_NUMBER=$(echo "$$PR_DATA" | jq -r '.items[0].number')
+          PR_TITLE=$(echo "$$PR_DATA" | jq -r '.items[0].title')
+          PR_BODY=$(echo "$$PR_DATA" | jq -r '.items[0].body')
+          PR_AUTHOR_LOGIN=$(echo "$$PR_DATA" | jq -r '.items[0].user.login')
+
+          # Get author's full name if possible
+          PR_AUTHOR_NAME=$(curl -s -H "Authorization: token $${GITHUB_TOKEN}" \
+            "https://api.github.com/users/$${PR_AUTHOR_LOGIN}" | jq -r '.name')
+
+          if [ "$$PR_AUTHOR_NAME" = "null" ] || [ -z "$$PR_AUTHOR_NAME" ]; then
+            PR_AUTHOR_NAME="@$${PR_AUTHOR_LOGIN}"
+          fi
+
+          MESSAGE="✅ *Build succeeded for PR #$${PR_NUMBER}* in \`$${REPO_NAME}\`\n*Title:* $${PR_TITLE}\n*Author:* $${PR_AUTHOR_NAME}\n*Description:*\n$${PR_BODY}"
+        else
+          # If not a PR
+          MESSAGE="✅ *Build succeeded for commit:* \`${COMMIT_SHA}\` in \`${REPO_NAME}\`"
+        fi
+
+        # Send Slack notification
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"$$MESSAGE\"}" \
+          "$$SLACK_WEBHOOK_URL"
