@@ -68,3 +68,135 @@ if [ "$$PR_DESCRIPTION" = "null" ] || [ -z "$$PR_DESCRIPTION" ]; then
                 ]
               }' \
           "$$SLACK_WEBHOOK_URL"
+
+
+######################$$$$$$$$$$$$$$$$$$$$$$$$$$###################################$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+- name: "ubuntu"
+    id: Notify
+    entrypoint: "bash"
+    waitFor: ["Build", "Push"]
+    secretEnv:
+      ["SLACK_GITHUB_TOKEN", "SLACK_WEBHOOK_URL", "SLACK_WEBHOOK_URL_FAILURE"]
+    args:
+      - -c
+      - |
+        set -x
+        echo "📢 Sending Slack notification..."
+        echo "📦 Installing curl jq..."
+        apt-get update && apt-get install -y curl jq git
+
+        COMMIT_SHA=$(git rev-parse HEAD)
+
+        AFTER_SHA=$(git rev-parse HEAD)
+        BEFORE_SHA=$(git rev-parse HEAD^)
+        
+        echo "$$AFTER_SHA"
+        echo "$$BEFORE_SHA"
+
+        echo "Fetching commit info..."
+        COMMIT_API="https://api.github.com/repos/sanadivya/slack-notify-demo/commits/$$COMMIT_SHA"
+        COMMIT_DATA=$(curl -s -H "Authorization: token $$SLACK_GITHUB_TOKEN" "$$COMMIT_API")
+        COMMIT_MESSAGE=$(echo "$$COMMIT_DATA" | jq -r '.commit.message')
+        COMMIT_AUTHOR=$(echo "$$COMMIT_DATA" | jq -r '.commit.author.name')
+
+        echo "📣 Sending slack notification..."
+
+        if [ -f /workspace/failure_marker ]; then
+
+          echo "❌ Failure detected. Sending failure message..."
+          FAIL_REASON=$(cat /workspace/failure_marker)
+          echo "🔍 Reason: $$FAIL_REASON"
+            
+          curl -X POST -H "Content-Type: application/json" \
+          -d '{
+                "attachments": [
+                  {
+                    "color": "#FF0000",
+                    "title": "❌ Deployment failed for BE '"${_ENV}"' environment",
+                    "text": "*Failure Details:*\n\n*Environment:* '"${_ENV}"'\n*Project:* '"${_PROJECT_ID}"'\n*Service:* '"${_SERVICE_NAME}"'\n*Version:* '"${SHORT_SHA}"'\n*Commit Author:* '"$${COMMIT_AUTHOR}"'",
+                    "footer": "'"${_SERVICE_NAME}"' • '"${_ENV}"'",
+                    "ts": '"$(date +%s)"',
+                    "mrkdwn_in": ["text", "title", "footer"]
+                  }
+                ]
+          }' \  
+          "$$SLACK_WEBHOOK_URL_FAILURE"
+
+        else
+
+          PR_API="https://api.github.com/repos/sanadivya/slack-notify-demo/commits/$$COMMIT_SHA/pulls"
+          PR_DATA=$(curl -s -H "Authorization: token $$SLACK_GITHUB_TOKEN" -H "Accept: application/vnd.github.groot-preview+json" "$$PR_API")
+          PR_COUNT=$(echo "$$PR_DATA" | jq 'length')
+
+          if [ "$$PR_COUNT" -gt 0 ]; then
+
+            LATEST_PR_DATA=$(curl -s -H "Authorization: token $$SLACK_GITHUB_TOKEN" \
+              "https://api.github.com/repos/sanadivya/slack-notify-demo/commits/$$COMMIT_SHA/pulls" \
+              -H "Accept: application/vnd.github.groot-preview+json" \
+              | jq '.[0]')
+                
+            PR_NUMBER=$(echo "$$LATEST_PR_DATA" | jq -r '.number')
+            PR_TITLE=$(echo "$$LATEST_PR_DATA" | jq -r '.title')
+            PR_SOURCE=$(echo "$$LATEST_PR_DATA" | jq -r '.head.ref')
+            PR_TARGET=$(echo "$$LATEST_PR_DATA" | jq -r '.base.ref')
+            PR_DESCRIPTION=$(echo "$$LATEST_PR_DATA" | jq -r '.body')
+
+            if [ "$$PR_DESCRIPTION" = "null" ] || [ -z "$$PR_DESCRIPTION" ]; then
+              PR_DESCRIPTION="-"
+            fi
+
+            PR_AUTHOR_LOGIN=$(echo "$$LATEST_PR_DATA" | jq -r '.user.login')
+
+            PR_AUTHOR_NAME=$(curl -s -H "Authorization: token $$SLACK_GITHUB_TOKEN" \
+              "https://api.github.com/users/$${PR_AUTHOR_LOGIN}" | jq -r '.name')
+
+            if [ "$$PR_AUTHOR_NAME" = "null" ] || [ -z "$$PR_AUTHOR_NAME" ]; then
+              PR_AUTHOR_NAME="@$${PR_AUTHOR_LOGIN}"
+            fi
+
+            PR_DESCRIPTION_FORMATTED=$(echo "$${PR_DESCRIPTION}" | sed 's/^/  /' | sed ':a;N;$!ba;s/\n/\\n/g')
+
+            if [ "$$LATEST_PR_DATA" != "null" ]; then
+              DETAILS="*PR Title*: $${PR_TITLE}\n*PR Number*: #$${PR_NUMBER}\n*PR Description*:\n$${PR_DESCRIPTION_FORMATTED}\n*PR Author*: $${PR_AUTHOR_NAME}"
+              ESCAPED_DETAILS=$(printf '%s' "$$DETAILS" | jq -R | jq -s -r 'join("\\n")')
+
+              GIT_INFO_BLOCK="{
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*PR Details*\n$${ESCAPED_DETAILS}\"
+                }
+              }"
+            else
+              GIT_INFO_BLOCK=""
+            fi
+
+            TIMESTAMP=$(date +%s)
+
+            PAYLOAD="{
+              \"blocks\": [
+                {
+                  \"type\": \"section\",
+                  \"text\": {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"✅ *New version deployed to BE ${_ENV} environment*\n\n*Environment:* ${_ENV}\n*Project:* ${_PROJECT_ID}\n*Service:* ${_SERVICE_NAME}\n*Version:* ${SHORT_SHA}\"
+                  }
+                }$${GIT_INFO_BLOCK:+,
+                $${GIT_INFO_BLOCK}}
+              ],
+              \"attachments\": [
+                {
+                  \"color\": \"#36a64f\",
+                  \"footer\": \"${_SERVICE_NAME} • ${_ENV}\",
+                  \"ts\": $${TIMESTAMP},
+                  \"mrkdwn_in\": [\"text\", \"title\", \"footer\"]
+                }
+              ]
+            }"
+
+            curl -X POST -H "Content-Type: application/json" \
+                -d "$$PAYLOAD" \
+                "$$SLACK_WEBHOOK_URL"
+        fi
+     
