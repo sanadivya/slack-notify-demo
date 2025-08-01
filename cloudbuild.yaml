@@ -60,10 +60,10 @@ steps:
         echo "🔍 Detecting merged PR for commit: $$COMMIT_SHA"
 
         PR_DATA=$(curl -s -H "Authorization: token $$GITHUB_TOKEN" \
-            "https://api.github.com/search/issues?q=sha:$$COMMIT_SHA+repo:MSN-EPIC/epic-be+is:pr")
+            "https://api.github.com/search/issues?q=sha:$$COMMIT_SHA+repo:sanadivya/slack-notify-demo+is:pr")
         PR_NUMBER=$(echo "$$PR_DATA" | jq -r '.items[0].number')
         PR_DETAILS=$(curl -s -H "Authorization: token $$GITHUB_TOKEN" \
-            "https://api.github.com/repos/MSN-EPIC/epic-be/pulls/$$PR_NUMBER")
+            "https://api.github.com/repos/sanadivya/slack-notify-demo/pulls/$$PR_NUMBER")
 
         PR_COUNT=$(echo "$$PR_DATA" | jq 'length')
 
