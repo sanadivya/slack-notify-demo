@@ -200,3 +200,5 @@ if [ "$$PR_DESCRIPTION" = "null" ] || [ -z "$$PR_DESCRIPTION" ]; then
                 "$$SLACK_WEBHOOK_URL"
         fi
      
+        # PR_DATA=$(curl -s -H "Authorization: token $${SLACK_GITHUB_TOKEN}" \
+        #   "https://api.github.com/search/issues?q=$${COMMIT_SHA}+repo:sanadivya/slack-notify-demo+type:pr")
