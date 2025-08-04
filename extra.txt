@@ -209,3 +209,15 @@ if [ "$$PR_DESCRIPTION" = "null" ] || [ -z "$$PR_DESCRIPTION" ]; then
         PR_NUMBER=$(echo "$$PR_DATA" | jq -r '.items[0].number')
         PR_DETAILS=$(curl -s -H "Authorization: token $$GITHUB_TOKEN" \
             "https://api.github.com/repos/MSN-EPIC/epic-be/pulls/$$PR_NUMBER")
+
+############################################################################################################
+
+
+
+        COMMIT_SHA=$(git rev-parse HEAD)
+
+        AFTER_SHA=$(git rev-parse HEAD)
+        BEFORE_SHA=$(git rev-parse HEAD^)
+        
+        echo "$$AFTER_SHA"
+        echo "$$BEFORE_SHA"
