@@ -42,13 +42,25 @@ steps:
         echo "📦 Installing curl jq..."
         apt-get update && apt-get install -y curl jq git
 
+        git fetch --unshallow || true
+
         COMMIT_SHA=$(git rev-parse HEAD)
 
+        PARENT_COMMITS=$(git rev-list --parents -n 1 $$COMMIT_SHA)
+        BEFORE_SHA=$(echo $$PARENT_COMMITS | cut -d' ' -f2)
+
+        echo "AFTER_SHA: $$COMMIT_SHA"
+        echo "BEFORE_SHA: $$BEFORE_SHA"
+
+        git fetch --unshallow 2>/dev/null || git fetch --depth=2
+
         AFTER_SHA=$(git rev-parse HEAD)
-        BEFORE_SHA=$(git rev-parse HEAD^)
-        
-        echo "$$AFTER_SHA"
-        echo "$$BEFORE_SHA"
+
+        PARENT_COMMITS=$(git rev-list --parents -n 1 $$AFTER_SHA)
+        BEFORE_SHA=$(echo $$PARENT_COMMITS | cut -d' ' -f2)
+
+        echo "AFTER_SHA: $$AFTER_SHA"
+        echo "BEFORE_SHA: $$BEFORE_SHA"
 
         echo "Fetching commit info..."
         COMMIT_API="https://api.github.com/repos/sanadivya/slack-notify-demo/commits/$$COMMIT_SHA"
