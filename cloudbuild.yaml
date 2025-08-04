@@ -62,10 +62,11 @@ steps:
         fi
         LATEST_PR_DATA=$(curl -s -H "Authorization: token $$SLACK_GITHUB_TOKEN" "$$PR_URL")
 
-        PR_TITLE=$(echo "$$PR_DATA" | jq -r '.title')
-        PR_NUMBER=$(echo "$$PR_DATA" | jq -r '.number')
-        PR_BODY=$(echo "$$PR_DATA" | jq -r '.body')
-        PR_AUTHOR=$(echo "$$PR_DATA" | jq -r '.user.login')
+        PR_NUMBER=$(echo "$$PR_DATA" | jq -r '.[0].number')
+        PR_TITLE=$(echo "$$PR_DATA" | jq -r '.[0].title')
+        PR_SOURCE=$(echo "$$PR_DATA" | jq -r '.[0].head.ref')
+        PR_TARGET=$(echo "$$PR_DATA" | jq -r '.[0].base.ref')
+        PR_DESCRIPTION=$(echo "$$PR_DATA" | jq -r '.[0].body')
 
         echo "Deployment Details"
         echo "Commit SHA: $$COMMIT_SHA"
