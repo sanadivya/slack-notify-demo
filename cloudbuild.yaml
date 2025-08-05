@@ -70,12 +70,6 @@ steps:
         PR_DESCRIPTION=$(echo "$$LATEST_PR_DATA" | jq -r '.body')
         PR_AUTHOR_LOGIN=$(echo "$$LATEST_PR_DATA" | jq -r '.user.login')
 
-        PR_AUTHOR_NAME=$(curl -s -H "Authorization: token $$SLACK_GITHUB_TOKEN" \
-          "https://api.github.com/users/$${PR_AUTHOR_LOGIN}" | jq -r '.name')
-
-        if [ "$$PR_AUTHOR_NAME" = "null" ] || [ -z "$$PR_AUTHOR_NAME" ]; then
-          PR_AUTHOR_NAME="@$${PR_AUTHOR_LOGIN}"
-        fi
 
         echo "Deployment Details"
         echo "Commit SHA: $$COMMIT_SHA"
