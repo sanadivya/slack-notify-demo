@@ -84,6 +84,5 @@ steps:
         echo "Commit SHA: $$COMMIT_SHA"
         echo "PR Title: $$PR_TITLE"
         echo "PR Number: #$$PR_NUMBER"
-        echo "PR Description:"
-        echo "$$PR_BODY"
+        echo "PR Description: $$PR_DESCRIPTION"
         echo "PR Author: $$PR_AUTHOR_NAME"
