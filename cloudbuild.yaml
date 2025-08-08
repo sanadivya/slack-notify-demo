@@ -82,6 +82,24 @@ steps:
           PR_DESCRIPTION_FORMATTED=$(echo "$${PR_DESCRIPTION}" | sed 's/^/  /' | sed ':a;N;$!ba;s/\n/\\n/g')
 
           DETAILS="\n- **PR Title**: $${PR_TITLE}\\n- **PR Number**: #$${PR_NUMBER}\\n- **PR Description**: \\n$${PR_DESCRIPTION_FORMATTED}\\n- **PR Author**: $${PR_AUTHOR_NAME}"
+          ESCAPED_DETAILS=$(printf '%s' "$$DETAILS" | jq -R | jq -s -r 'join("\\n")')
+
+          GIT_INFO_SECTION="{
+              \"blocks\": [
+                {
+                  \"type\": \"section\",
+                  \"text\": {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*PR Details*\n$$ESCAPED_DETAILS\"
+                  }
+                }
+              ]
+            }"
+
+        else
+            GIT_INFO_SECTION=""
+            DETAILS=""
+        fi
           
           echo "$$DETAILS"
           echo "Deployment Details"
@@ -106,4 +124,3 @@ steps:
                   ]
                 }' \
             "$$SLACK_WEBHOOK_URL"
-        fi
