@@ -92,12 +92,12 @@ steps:
                 \"type\": \"section\",
                 \"text\": {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"*PR Details*\n${ESCAPED_DETAILS}\"
+                  \"text\": \"*PR Details*\n$${ESCAPED_DETAILS}\"
                 }
               }
             ]
           }"
-          
+
         else
             GIT_INFO_SECTION=""
             DETAILS=""
