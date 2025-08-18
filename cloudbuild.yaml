@@ -85,19 +85,19 @@ steps:
           ESCAPED_DETAILS=$(printf '%s' "$$DETAILS" | jq -R | jq -s -r 'join("\\n")')
 
           GIT_INFO_SECTION=",{
-              \"blocks\": [
-                {
-                  \"type\": \"section\",
-                  \"text\": {
-                    \"type\": \"mrkdwn\",
-                    \"color\": \"#439FE0\",
-                    \"title\": \"📌 Git Info\",
-                    \"text\": \"*PR Details*\n$$ESCAPED_DETAILS\"
-                  }
+            \"color\": \"#439FE0\",
+            \"title\": \"📌 Git Info\",
+            \"blocks\": [
+              {
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*PR Details*\n${ESCAPED_DETAILS}\"
                 }
-              ]
-            }"
-
+              }
+            ]
+          }"
+          
         else
             GIT_INFO_SECTION=""
             DETAILS=""
