@@ -84,7 +84,7 @@ steps:
           DETAILS="\n- **PR Title**: $${PR_TITLE}\\n- **PR Number**: #$${PR_NUMBER}\\n- **PR Description**: \\n$${PR_DESCRIPTION_FORMATTED}\\n- **PR Author**: $${PR_AUTHOR_NAME}"
           ESCAPED_DETAILS=$(printf '%s' "$$DETAILS" | jq -R | jq -s -r 'join("\\n")')
 
-          GIT_INFO_SECTION="{
+          GIT_INFO_SECTION=",{
               \"blocks\": [
                 {
                   \"type\": \"section\",
@@ -110,6 +110,16 @@ steps:
           echo "PR Number: #$$PR_NUMBER"
           echo "PR Description: $$PR_DESCRIPTION"
           echo "PR Author: $$PR_AUTHOR_NAME"
+
+          echo '{
+            "attachments": [
+              {
+                "color": "#36a64f",
+                "title": "✅ Test",
+                "text": "Checking payload"
+              }'"$${GIT_INFO_SECTION}"'
+            ]
+          }' | jq .
 
           TIMESTAMP=$(date +%s)
             curl -X POST -H "Content-Type: application/json" \
