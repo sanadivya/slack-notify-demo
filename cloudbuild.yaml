@@ -122,7 +122,7 @@ steps:
                       "footer": "'"${_SERVICE_NAME}"'  • '"${_ENV}"'",
                       "ts": '"$${TIMESTAMP}"',
                       "mrkdwn_in": ["text", "title", "footer"]
-                    }'"${GIT_INFO_SECTION}"'
+                    }'"$${GIT_INFO_SECTION}"'
                   ]
                 }' \
             "$$SLACK_WEBHOOK_URL"
