@@ -122,17 +122,27 @@ steps:
           }' | jq .
 
           TIMESTAMP=$(date +%s)
-            curl -X POST -H "Content-Type: application/json" \
-            -d '{
+            curl -X POST -H 'Content-type: application/json' \
+                --data '{
                   "attachments": [
                     {
                       "color": "#36a64f",
-                      "title": "✅ New version deployed to BE '"${_ENV}"' environment",
-                      "text": "*Deployment Details:*\n\n*Environment:* '"${_ENV}"'\n*Project:* '"${_PROJECT_ID}"'\n*Service:* '"${_SERVICE_NAME}"'\n*Version:* '"${SHORT_SHA}"'\n",
-                      "footer": "'"${_SERVICE_NAME}"'  • '"${_ENV}"'",
-                      "ts": '"$${TIMESTAMP}"',
-                      "mrkdwn_in": ["text", "title", "footer"]
-                    }'"$${GIT_INFO_SECTION}"'
+                      "title": "✅ Deployment Success",
+                      "text": "*Environment:* staging\n*Service:* demo-service",
+                      "mrkdwn_in": ["text", "title"]
+                    },
+                    {
+                      "color": "#439FE0",
+                      "title": "📌 Git Info",
+                      "blocks": [
+                        {
+                          "type": "section",
+                          "text": {
+                            "type": "mrkdwn",
+                            "text": "*PR Details*\n- **PR Title**: Demo\n- **PR Author**: Divya"
+                          }
+                        }
+                      ]
+                    }
                   ]
-                }' \
-            "$$SLACK_WEBHOOK_URL"
+                }' "$$SLACK_WEBHOOK_URL"
