@@ -98,65 +98,95 @@ steps:
             ]
           }"
 
+          GIT_INFO_SECTION=',{
+            "color": "#439FE0",
+            "title": "📌 Git Info",
+            "text": "*PR Details*\n$${ESCAPED_DETAILS}"
+            "mrkdwn_in": ["text", "title"]
+          }'
+
         else
             GIT_INFO_SECTION=""
             DETAILS=""
         fi
           
-          echo "$$DETAILS"
-          echo "Deployment Details"
-          echo "Commit SHA: $$COMMIT_SHA"
-          echo "PR Title: $$PR_TITLE"
-          echo "PR Number: #$$PR_NUMBER"
-          echo "PR Description: $$PR_DESCRIPTION"
-          echo "PR Author: $$PR_AUTHOR_NAME"
+        echo "$$DETAILS"
+        echo "Deployment Details"
+        echo "Commit SHA: $$COMMIT_SHA"
+        echo "PR Title: $$PR_TITLE"
+        echo "PR Number: #$$PR_NUMBER"
+        echo "PR Description: $$PR_DESCRIPTION"
+        echo "PR Author: $$PR_AUTHOR_NAME"
 
-          echo $$SLACK_WEBHOOK_URL
-          
-          curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":"Slack webhook test"}' "$$SLACK_WEBHOOK_URL"
+        echo $$SLACK_WEBHOOK_URL
+        
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"Slack webhook test"}' "$$SLACK_WEBHOOK_URL"
 
-          echo '{
+        echo '{
+          "attachments": [
+            {
+              "color": "#36a64f",
+              "title": "✅ Test",
+              "text": "Checking payload"
+            }'"$${GIT_INFO_SECTION}"'
+          ]
+        }' | jq .
+
+        TIMESTAMP=$(date +%s)
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{
             "attachments": [
               {
                 "color": "#36a64f",
-                "title": "✅ Test",
-                "text": "Checking payload"
-              }'"$${GIT_INFO_SECTION}"'
+                "title": "✅ Deployment Success",
+                "text": "*Environment:* staging\n*Service:* demo-service",
+                "mrkdwn_in": ["text", "title"]
+              }
+            ],
+            "blocks": [
+              {
+                "type": "section",
+                "title": "📌 Git Info",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*PR Details*\n- **PR Title**: Demo\n- **PR Author**: Divya"
+                }
+              }
             ]
-          }' | jq .
+          }' "$$SLACK_WEBHOOK_URL"
 
-          TIMESTAMP=$(date +%s)
-          curl -X POST -H 'Content-type: application/json' \
-            --data '{
-              "attachments": [
-                {
-                  "color": "#36a64f",
-                  "title": "✅ Deployment Success",
-                  "text": "*Environment:* staging\n*Service:* demo-service",
-                  "mrkdwn_in": ["text", "title"]
+        curl -X POST -H 'Content-type: application/json' \
+              --data '{
+                "attachments": [
+                  {
+                    "color": "#36a64f",
+                    "title": "✅ Deployment Success",
+                    "text": "*Environment:* staging\n*Service:* demo-service",
+                    "mrkdwn_in": ["text", "title"]
+                  }'"$$GIT_INFO_SECTION"'
+                ]
+              }' "$$SLACK_WEBHOOK_URL"
+        
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "attachments": [
+              {
+                "color": "#36a64f",
+                "title": "✅ Deployment Success",
+                "text": "*Environment:* staging\n*Service:* demo-service",
+                "mrkdwn_in": ["text", "title"]
+              }
+            ],
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*PR Details*\n$${GIT_INFO_SECTION}"
                 }
-              ],
-              "blocks": [
-                {
-                  "type": "section",
-                  "title": "📌 Git Info",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*PR Details*\n- **PR Title**: Demo\n- **PR Author**: Divya"
-                  }
-                }
-              ]
-            }' "$$SLACK_WEBHOOK_URL"
+              }
+            ]
+        }' "$$SLACK_WEBHOOK_URL"
 
-            curl -X POST -H 'Content-type: application/json' \
-                --data '{
-                  "attachments": [
-                    {
-                      "color": "#36a64f",
-                      "title": "✅ Deployment Success",
-                      "text": "*Environment:* staging\n*Service:* demo-service",
-                      "mrkdwn_in": ["text", "title"]
-                    }'"$$GIT_INFO_SECTION"'
-                  ]
-                }' "$$SLACK_WEBHOOK_URL"
+          
