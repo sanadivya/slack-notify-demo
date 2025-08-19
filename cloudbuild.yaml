@@ -98,7 +98,7 @@ steps:
             ]
           }"
 
-          GIT_INFO_SECTION=',{
+          GIT_INFO_SECTION='{
             "color": "#439FE0",
             "title": "📌 Git Info",
             "text": "*PR Details*\n$${ESCAPED_DETAILS}"
@@ -164,7 +164,8 @@ steps:
                     "title": "✅ Deployment Success",
                     "text": "*Environment:* staging\n*Service:* demo-service",
                     "mrkdwn_in": ["text", "title"]
-                  }'"$$GIT_INFO_SECTION"'
+                  },
+                  '"$$GIT_INFO_SECTION"'
                 ]
               }' "$$SLACK_WEBHOOK_URL"
         
@@ -184,6 +185,29 @@ steps:
                 "text": {
                   "type": "mrkdwn",
                   "text": "*PR Details*\n$${GIT_INFO_SECTION}"
+                }
+              }
+            ]
+        }' "$$SLACK_WEBHOOK_URL"
+        
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ":white_check_mark: *Deployment Success*\n*Environment:* staging\n*Service:* demo-service"
+                }
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*PR Details*\n-$${GIT_INFO_SECTION}"
                 }
               }
             ]
