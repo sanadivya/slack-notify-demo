@@ -111,6 +111,11 @@ steps:
           echo "PR Description: $$PR_DESCRIPTION"
           echo "PR Author: $$PR_AUTHOR_NAME"
 
+          echo $$SLACK_WEBHOOK_URL
+          
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"Slack webhook test"}' "$$SLACK_WEBHOOK_URL"
+
           echo '{
             "attachments": [
               {
@@ -122,6 +127,28 @@ steps:
           }' | jq .
 
           TIMESTAMP=$(date +%s)
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "attachments": [
+                {
+                  "color": "#36a64f",
+                  "title": "✅ Deployment Success",
+                  "text": "*Environment:* staging\n*Service:* demo-service",
+                  "mrkdwn_in": ["text", "title"]
+                }
+              ],
+              "blocks": [
+                {
+                  "type": "section",
+                  "title": "📌 Git Info",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*PR Details*\n- **PR Title**: Demo\n- **PR Author**: Divya"
+                  }
+                }
+              ]
+            }' "$$SLACK_WEBHOOK_URL"
+
             curl -X POST -H 'Content-type: application/json' \
                 --data '{
                   "attachments": [
@@ -130,19 +157,6 @@ steps:
                       "title": "✅ Deployment Success",
                       "text": "*Environment:* staging\n*Service:* demo-service",
                       "mrkdwn_in": ["text", "title"]
-                    },
-                    {
-                      "color": "#439FE0",
-                      "title": "📌 Git Info",
-                      "blocks": [
-                        {
-                          "type": "section",
-                          "text": {
-                            "type": "mrkdwn",
-                            "text": "*PR Details*\n- **PR Title**: Demo\n- **PR Author**: Divya"
-                          }
-                        }
-                      ]
-                    }
+                    }'"$$GIT_INFO_SECTION"'
                   ]
                 }' "$$SLACK_WEBHOOK_URL"
