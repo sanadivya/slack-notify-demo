@@ -22,4 +22,4 @@ jobs:
 
       - run: npm install --ignore-scripts
 
-      - run: npx commitlint --from=origin/dev
+      - run: npx commitlint --from=origin/main
