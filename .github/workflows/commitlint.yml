@@ -20,6 +20,6 @@ jobs:
         with:
           node-version: 20
 
-      - run: npm ci --ignore-scripts
+      - run: npm install --ignore-scripts
 
       - run: npx commitlint --from=origin/dev
