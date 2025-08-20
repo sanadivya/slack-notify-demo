@@ -6,12 +6,12 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 jobs:
   commitlint:
     runs-on: ubuntu-latest
     steps:
+      # Checkout PR code safely (does NOT expose repo secrets to forked PRs)
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -22,11 +22,4 @@ jobs:
 
       - run: npm ci --ignore-scripts
 
-      - uses: wagoid/commitlint-github-action@v6
-        with:
-          configFile: ./commitlint.config.ts
-          failOnWarnings: false
-          failOnErrors: true
-          helpURL: https://github.com/conventional-changelog/commitlint/#what-is-commitlint
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commitDepth: 20
+      - run: npx commitlint --from=origin/dev
