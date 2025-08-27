@@ -27,190 +27,119 @@ steps:
     name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'asia-south1-docker.pkg.dev/articulate-area-464808-q4/slack-notify/sample-app']
 
-  - name: "ubuntu"
+  # --- Notify step (success/failure). Waits on all the above steps. ---
+  - name: "ubuntu:22.04"
     id: Notify
     entrypoint: "bash"
-    waitFor: ["Build", "Push"]
+    waitFor: ["Build", "Push", "Deploy"]
+    allowFailure: true
+    # Map Cloud Build substitutions to environment variables for the script
+    env:
+      - 'CB_COMMIT_SHA=$COMMIT_SHA'
+      - 'CB_REVISION_ID=$REVISION_ID'
+      - 'CB_BRANCH=$BRANCH_NAME'
+      - 'CB_REPO=$REPO_NAME'
+      - 'CB_BUILD_ID=$BUILD_ID'
+      - 'CB_PROJECT_ID=$PROJECT_ID'
+      - 'REPO_OWNER=${_REPO_OWNER}'
+      - 'REPO_NAME=${_REPO_NAME}'
     secretEnv:
-      ["SLACK_GITHUB_TOKEN", "SLACK_WEBHOOK_URL", "SLACK_WEBHOOK_URL_FAILURE"]
+      - GITHUB_TOKEN
+      - TEAMS_WEBHOOK_URL
+      - TEAMS_WEBHOOK_URL_FAILURE
     args:
-      - '-c'
+      - -c
       - |
-        echo "🔍 Setting up..."
+        set -Eeuo pipefail
+        echo "🔔 Notify step started"
+        echo "🔍 Checking for failure marker..."
+
         echo "📦 Installing curl jq..."
-        apt-get update && apt-get install -y curl jq git
+        apt-get update -y >/dev/null && apt-get install -y curl jq >/dev/null
 
-        COMMIT_SHA=$(git rev-parse HEAD)
+        owner="${REPO_OWNER}"
+        repo="${REPO_NAME}"
 
-        echo "Fetching commit info..."
-        COMMIT_API="https://api.github.com/repos/sanadivya/slack-notify-demo/commits/$$COMMIT_SHA"
-        COMMIT_DATA=$(curl -s -H "Authorization: token $$SLACK_GITHUB_TOKEN" "$$COMMIT_API")
-        COMMIT_MESSAGE=$(echo "$$COMMIT_DATA" | jq -r '.commit.message')
-        COMMIT_AUTHOR=$(echo "$$COMMIT_DATA" | jq -r '.commit.author.name')
+        # Prefer Cloud Build subs; fall back to revision id if needed
+        COMMIT_SHA="${CB_COMMIT_SHA:-${CB_REVISION_ID:-}}"
+        BRANCH_NAME="${CB_BRANCH:-}"
 
-        echo "📣 Sending slack notification..."
-        echo "🔍 Detecting merged PR for commit: $$COMMIT_SHA"
+        echo "Using commit: ${COMMIT_SHA} on branch: ${BRANCH_NAME} in ${owner}/${repo}"
 
-        PR_DATA=$(curl -s -H "Authorization: token $$SLACK_GITHUB_TOKEN" \
-            "https://api.github.com/search/issues?q=sha:$$COMMIT_SHA+repo:sanadivya/slack-notify-demo+is:pr")
+        gh() {
+          curl -sS \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$1"
+        }
 
-        PR_COUNT=$(echo "$$PR_DATA" | jq 'length')
+        # Helper: first merged PR associated with a commit, filtered to our base branch
+        pr_for_commit () {
+          local sha="$1"
+          gh "https://api.github.com/repos/${owner}/${repo}/commits/${sha}/pulls" \
+            | jq --arg base "${BRANCH_NAME}" '[ .[] | select(.merged_at != null) | select(.base.ref == $base) ][0]'
+        }
 
-        if [ "$$PR_COUNT" -gt 0 ]; then
+        # 1) Try to get PR directly from the build commit
+        PR_JSON="$(pr_for_commit "${COMMIT_SHA}")"
 
-          PR_URL=$(echo "$$PR_DATA" | jq -r '.items[0].pull_request.url')
-          if [ "$$PR_URL" == "null" ] || [ -z "$$PR_URL" ]; then
-            echo "❌ No PR found for commit: $$COMMIT_SHA"
-          exit 1
-          fi
-          LATEST_PR_DATA=$(curl -s -H "Authorization: token $$SLACK_GITHUB_TOKEN" "$$PR_URL")
-
-          PR_NUMBER=$(echo "$$LATEST_PR_DATA" | jq -r '.number')
-          PR_TITLE=$(echo "$$LATEST_PR_DATA" | jq -r '.title')
-          PR_SOURCE=$(echo "$$LATEST_PR_DATA" | jq -r '.head.ref')
-          PR_TARGET=$(echo "$$LATEST_PR_DATA" | jq -r '.base.ref')
-          PR_DESCRIPTION=$(echo "$$LATEST_PR_DATA" | jq -r '.body')
-          PR_AUTHOR_LOGIN=$(echo "$$LATEST_PR_DATA" | jq -r '.user.login')
-
-          PR_AUTHOR_NAME=$(curl -s -H "Authorization: token $$SLACK_GITHUB_TOKEN" \
-            "https://api.github.com/users/$${PR_AUTHOR_LOGIN}" | jq -r '.name')
-
-          if [ "$$PR_AUTHOR_NAME" = "null" ] || [ -z "$$PR_AUTHOR_NAME" ]; then
-            PR_AUTHOR_NAME="@$${PR_AUTHOR_LOGIN}"
+        # 2) If none, this is likely a merge commit; try the second parent (the PR tip)
+        if [ -z "${PR_JSON}" ] || [ "${PR_JSON}" = "null" ]; then
+          COMMIT_JSON="$(gh "https://api.github.com/repos/${owner}/${repo}/commits/${COMMIT_SHA}")"
+          PARENT2_SHA="$(echo "${COMMIT_JSON}" | jq -r '.parents[1].sha // empty')"
+          if [ -n "${PARENT2_SHA}" ]; then
+            echo "No PR on merge commit; trying second parent ${PARENT2_SHA}"
+            PR_JSON="$(pr_for_commit "${PARENT2_SHA}")"
           fi
 
-          PR_DESCRIPTION_FORMATTED=$(echo "$${PR_DESCRIPTION}" | sed 's/^/  /' | sed ':a;N;$!ba;s/\n/\\n/g')
-
-          DETAILS="\n- **PR Title**: $${PR_TITLE}\\n- **PR Number**: #$${PR_NUMBER}\\n- **PR Description**: \\n$${PR_DESCRIPTION_FORMATTED}\\n- **PR Author**: $${PR_AUTHOR_NAME}"
-          ESCAPED_DETAILS=$(printf '%s' "$$DETAILS" | jq -R | jq -s -r 'join("\\n")')
-
-          GIT_INFO_SECTION=",{
-            \"color\": \"#439FE0\",
-            \"title\": \"📌 Git Info\",
-            \"blocks\": [
-              {
-                \"type\": \"section\",
-                \"text\": {
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"*PR Details*\n$${ESCAPED_DETAILS}\"
-                }
-              }
-            ]
-          }"
-
-          GIT_INFO_SECTION='{
-            "color": "#439FE0",
-            "title": "📌 Git Info",
-            "text": "*PR Details*\n$${ESCAPED_DETAILS}"
-            "mrkdwn_in": ["text", "title"]
-          }'
-
-        else
-            GIT_INFO_SECTION=""
-            DETAILS=""
+          # 3) Last resort: parse PR number from merge commit message
+          if [ -z "${PR_JSON}" ] || [ "${PR_JSON}" = "null" ]; then
+            PR_NUM_FROM_MSG="$(echo "${COMMIT_JSON}" | jq -r '.commit.message | capture("Merge pull request #(?<n>[0-9]+)")?.n // empty')"
+            if [ -n "${PR_NUM_FROM_MSG}" ]; then
+              PR_JSON="$(gh "https://api.github.com/repos/${owner}/${repo}/pulls/${PR_NUM_FROM_MSG}")"
+            fi
+          fi
         fi
-          
-        echo "$$DETAILS"
-        echo "Deployment Details"
-        echo "Commit SHA: $$COMMIT_SHA"
-        echo "PR Title: $$PR_TITLE"
-        echo "PR Number: #$$PR_NUMBER"
-        echo "PR Description: $$PR_DESCRIPTION"
-        echo "PR Author: $$PR_AUTHOR_NAME"
 
-        echo $$SLACK_WEBHOOK_URL
-        
-        curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":"Slack webhook test"}' "$$SLACK_WEBHOOK_URL"
+        # Build details section if we have a PR
+        GIT_INFO_SECTION=""
+        DETAILS=""
+        if [ -n "${PR_JSON}" ] && [ "${PR_JSON}" != "null" ]; then
+          PR_NUMBER="$(echo "${PR_JSON}" | jq -r '.number // empty')"
+          PR_MERGED_AT="$(echo "${PR_JSON}" | jq -r '.merged_at // empty')"
+          PR_BASE="$(echo "${PR_JSON}" | jq -r '.base.ref // empty')"
+          if [ -n "${PR_NUMBER}" ] && [ -n "${PR_MERGED_AT}" ] && [ "${PR_BASE}" = "${BRANCH_NAME}" ]; then
+            PR_TITLE="$(echo "${PR_JSON}" | jq -r '.title // "-"')"
+            PR_DESCRIPTION="$(echo "${PR_JSON}" | jq -r '.body // "-"')"
+            PR_SOURCE="$(echo "${PR_JSON}" | jq -r '.head.ref // "-"')"
+            PR_TARGET="$(echo "${PR_JSON}" | jq -r '.base.ref // "-"')"
+            PR_AUTHOR_LOGIN="$(echo "${PR_JSON}" | jq -r '.user.login // "-"')"
 
-        echo '{
-          "attachments": [
-            {
-              "color": "#36a64f",
-              "title": "✅ Test",
-              "text": "Checking payload"
-            }'"$${GIT_INFO_SECTION}"'
-          ]
-        }' | jq .
+            PR_AUTHOR_NAME="$(gh "https://api.github.com/users/${PR_AUTHOR_LOGIN}" | jq -r '.name // empty')"
+            [ -z "${PR_AUTHOR_NAME}" ] && PR_AUTHOR_NAME="${PR_AUTHOR_LOGIN}"
 
-        TIMESTAMP=$(date +%s)
-        curl -X POST -H 'Content-type: application/json' \
-          --data '{
-            "attachments": [
-              {
-                "color": "#36a64f",
-                "title": "✅ Deployment Success",
-                "text": "*Environment:* staging\n*Service:* demo-service",
-                "mrkdwn_in": ["text", "title"]
-              }
-            ],
-            "blocks": [
-              {
-                "type": "section",
-                "title": "📌 Git Info",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*PR Details*\n- **PR Title**: Demo\n- **PR Author**: Divya"
-                }
-              }
-            ]
-          }' "$$SLACK_WEBHOOK_URL"
+            PR_DESCRIPTION_FORMATTED="$(printf "%s" "${PR_DESCRIPTION}" | sed 's/^/  /' | sed ':a;N;$!ba;s/\n/\\n/g')"
 
-        curl -X POST -H 'Content-type: application/json' \
-              --data '{
-                "attachments": [
-                  {
-                    "color": "#36a64f",
-                    "title": "✅ Deployment Success",
-                    "text": "*Environment:* staging\n*Service:* demo-service",
-                    "mrkdwn_in": ["text", "title"]
-                  },
-                  '"$$GIT_INFO_SECTION"'
-                ]
-              }' "$$SLACK_WEBHOOK_URL"
-        
-        curl -X POST -H 'Content-type: application/json' \
-          --data '{
-            "attachments": [
-              {
-                "color": "#36a64f",
-                "title": "✅ Deployment Success",
-                "text": "*Environment:* staging\n*Service:* demo-service",
-                "mrkdwn_in": ["text", "title"]
-              }
-            ],
-            "blocks": [
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*PR Details*\n$${GIT_INFO_SECTION}"
-                }
-              }
-            ]
-        }' "$$SLACK_WEBHOOK_URL"
-        
-        curl -X POST -H 'Content-type: application/json' \
-          --data '{
-            "blocks": [
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": ":white_check_mark: *Deployment Success*\n*Environment:* staging\n*Service:* demo-service"
-                }
-              },
-              {
-                "type": "divider"
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*PR Details*\n-$${GIT_INFO_SECTION}"
-                }
-              }
-            ]
-        }' "$$SLACK_WEBHOOK_URL"
+            DETAILS="\n- **PR Title**: ${PR_TITLE}\\n- **PR Number**: #${PR_NUMBER}\\n- **PR Description**: \\n\\n${PR_DESCRIPTION_FORMATTED}\\n- **PR Author**: ${PR_AUTHOR_NAME}\\n- **From**: ${PR_SOURCE} → ${PR_TARGET}"
+            ESCAPED_DETAILS="$(printf '%s' "${DETAILS}" | jq -R | jq -s -r 'join("\\n")')"
+            GIT_INFO_SECTION="{ \"activityTitle\": \"PR Details\", \"text\": \"${ESCAPED_DETAILS}\" },"
+          fi
+        fi
 
-          
+        SHORT_SHA="${COMMIT_SHA:0:7}"
+        LOGS_URL="https://console.cloud.google.com/cloud-build/builds;region=global/${CB_BUILD_ID}?project=${CB_PROJECT_ID}"
+
+        echo "📣 Sending Teams notification..."
+        if [ -f /workspace/failure_marker ]; then
+          echo "❌ Failure detected."
+          FAIL_REASON="$(cat /workspace/failure_marker)"
+          curl -sS -X POST -H "Content-Type: application/json" \
+            -d "{\n                \"@type\": \"MessageCard\",\n                \"@context\": \"http://schema.org/extensions\",\n                \"summary\": \"Deployment Failure\",\n                \"themeColor\": \"FF0000\",\n                \"title\": \"❌ Deployment failed for FE '${_ENV}' environment\",\n                \"sections\": [\n                  { \"activityTitle\": \"Failure Details\",\n                    \"text\": \"- **Environment**: ${_ENV}\\n- **Project**: ${_PROJECT_ID}\\n- **Service**: ${_SERVICE_NAME}\\n- **Version**: ${SHORT_SHA}\\n- **Reason**: ${FAIL_REASON}\"\n                  },\n                  { \"activityTitle\": \"Status\",\n                    \"text\": \"Deployment Failed. [Build Logs](${LOGS_URL})\"\n                  }\n                ]\n              }" \
+            "${TEAMS_WEBHOOK_URL_FAILURE}" >/dev/null || true
+        else
+          curl -sS -X POST -H "Content-Type: application/json" \
+            -d "{\n                \"@type\": \"MessageCard\",\n                \"@context\": \"http://schema.org/extensions\",\n                \"summary\": \"Deployment Notification\",\n                \"themeColor\": \"00FF00\",\n                \"title\": \"✅ New version deployed to FE ${_ENV} environment\",\n                \"sections\": [\n                  { \"activityTitle\": \"Deployment Details\",\n                    \"text\": \"- **Environment**: ${_ENV}\\n- **Project**: ${_PROJECT_ID}\\n- **Service**: ${_SERVICE_NAME}\\n- **Version**: ${SHORT_SHA}\\n- **Logs**: [${CB_BUILD_ID}](${LOGS_URL})\"\n                  },\n                  ${GIT_INFO_SECTION}
+                  { \"activityTitle\": \"Status\",\n                    \"text\": \"Deployment completed successfully.\"\n                  }\n                ]\n              }" \
+            "${TEAMS_WEBHOOK_URL}" >/dev/null || true
+        fi
