@@ -67,7 +67,7 @@ steps:
 
         gh() {
           curl -sS \
-            -H "Authorization: Bearer $${GITHUB_TOKEN}" \
+            -H "Authorization: Bearer $${SLACK_GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "$1"
@@ -131,10 +131,10 @@ steps:
 
           curl -sS -X POST -H "Content-Type: application/json" \
             -d "{\n                \"@type\": \"MessageCard\",\n                \"@context\": \"http://schema.org/extensions\",\n                \"summary\": \"Deployment Failure\",\n                \"themeColor\": \"FF0000\",\n                \"title\": \"❌ Deployment failed for FE '${_ENV}' environment\",\n                \"sections\": [\n                  { \"activityTitle\": \"Failure Details\",\n                    \"text\": \"- **Environment**: ${_ENV}\\n- **Project**: ${_PROJECT_ID}\\n- **Service**: ${_SERVICE_NAME}\\n- **Version**: ${SHORT_SHA}\\n- **Reason**: $${FAIL_REASON}\"\n                  },\n                  { \"activityTitle\": \"Status\",\n                    \"text\": \"Deployment Failed. [Build Logs]($${LOGS_URL})\"\n                  }\n                ]\n              }" \
-            "$${TEAMS_WEBHOOK_URL_FAILURE}" >/dev/null || true
+            "$${SLACK_WEBHOOK_URL_FAILURE}" >/dev/null || true
         else
           curl -sS -X POST -H "Content-Type: application/json" \
             -d "{\n                \"@type\": \"MessageCard\",\n                \"@context\": \"http://schema.org/extensions\",\n                \"summary\": \"Deployment Notification\",\n                \"themeColor\": \"00FF00\",\n                \"title\": \"✅ New version deployed to FE ${_ENV} environment\",\n                \"sections\": [\n                  { \"activityTitle\": \"Deployment Details\",\n                    \"text\": \"- **Environment**: ${_ENV}\\n- **Project**: ${_PROJECT_ID}\\n- **Service**: ${_SERVICE_NAME}\\n- **Version**: ${SHORT_SHA}\\n- **Logs**: [$${CB_BUILD_ID}]($${LOGS_URL})\"\n                  },\n                  $${GIT_INFO_SECTION}
                   { \"activityTitle\": \"Status\",\n                    \"text\": \"Deployment completed successfully.\"\n                  }\n                ]\n              }" \
-            "$${TEAMS_WEBHOOK_URL}" >/dev/null || true
+            "$${SLACK_WEBHOOK_URL}" >/dev/null || true
         fi
