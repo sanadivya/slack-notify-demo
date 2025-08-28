@@ -41,8 +41,8 @@ steps:
       - 'CB_REPO=$REPO_NAME'
       - 'CB_BUILD_ID=$BUILD_ID'
       - 'CB_PROJECT_ID=$PROJECT_ID'
-      - 'REPO_OWNER=${_REPO_OWNER}'
-      - 'REPO_NAME=${_REPO_NAME}'
+      - 'REPO_OWNER=$${_REPO_OWNER}'
+      - 'REPO_NAME=$${_REPO_NAME}'
     secretEnv:
       - GITHUB_TOKEN
       - TEAMS_WEBHOOK_URL
@@ -57,73 +57,67 @@ steps:
         echo "📦 Installing curl jq..."
         apt-get update -y >/dev/null && apt-get install -y curl jq >/dev/null
 
-        owner="${REPO_OWNER}"
-        repo="${REPO_NAME}"
+        owner="$${REPO_OWNER}"
+        repo="$${REPO_NAME}"
 
-        # Prefer Cloud Build subs; fall back to revision id if needed
-        COMMIT_SHA="${CB_COMMIT_SHA:-${CB_REVISION_ID:-}}"
-        BRANCH_NAME="${CB_BRANCH:-}"
+        COMMIT_SHA="$${CB_COMMIT_SHA:-$${CB_REVISION_ID:-}}"
+        BRANCH_NAME="$${CB_BRANCH:-}"
 
-        echo "Using commit: ${COMMIT_SHA} on branch: ${BRANCH_NAME} in ${owner}/${repo}"
+        echo "Using commit: $${COMMIT_SHA} on branch: $${BRANCH_NAME} in $${owner}/$${repo}"
 
         gh() {
           curl -sS \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Authorization: Bearer $${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "$1"
         }
 
-        # Helper: first merged PR associated with a commit, filtered to our base branch
         pr_for_commit () {
           local sha="$1"
-          gh "https://api.github.com/repos/${owner}/${repo}/commits/${sha}/pulls" \
-            | jq --arg base "${BRANCH_NAME}" '[ .[] | select(.merged_at != null) | select(.base.ref == $base) ][0]'
+          gh "https://api.github.com/repos/$${owner}/$${repo}/commits/$${sha}/pulls" \
+            | jq --arg base "$${BRANCH_NAME}" '[ .[] | select(.merged_at != null) | select(.base.ref == $$base) ][0]'
         }
 
-        # 1) Try to get PR directly from the build commit
-        PR_JSON="$(pr_for_commit "${COMMIT_SHA}")"
+        PR_JSON="$$(pr_for_commit "$${COMMIT_SHA}")"
 
-        # 2) If none, this is likely a merge commit; try the second parent (the PR tip)
-        if [ -z "${PR_JSON}" ] || [ "${PR_JSON}" = "null" ]; then
-          COMMIT_JSON="$(gh "https://api.github.com/repos/${owner}/${repo}/commits/${COMMIT_SHA}")"
-          PARENT2_SHA="$(echo "${COMMIT_JSON}" | jq -r '.parents[1].sha // empty')"
-          if [ -n "${PARENT2_SHA}" ]; then
-            echo "No PR on merge commit; trying second parent ${PARENT2_SHA}"
-            PR_JSON="$(pr_for_commit "${PARENT2_SHA}")"
+        if [ -z "$${PR_JSON}" ] || [ "$${PR_JSON}" = "null" ]; then
+          COMMIT_JSON="$(gh "https://api.github.com/repos/$${owner}/$${repo}/commits/$${COMMIT_SHA}")"
+          PARENT2_SHA="$(echo "$${COMMIT_JSON}" | jq -r '.parents[1].sha // empty')"
+          if [ -n "$${PARENT2_SHA}" ]; then
+            echo "No PR on merge commit; trying second parent $${PARENT2_SHA}"
+            PR_JSON="$(pr_for_commit "$${PARENT2_SHA}")"
           fi
 
-          # 3) Last resort: parse PR number from merge commit message
-          if [ -z "${PR_JSON}" ] || [ "${PR_JSON}" = "null" ]; then
-            PR_NUM_FROM_MSG="$(echo "${COMMIT_JSON}" | jq -r '.commit.message | capture("Merge pull request #(?<n>[0-9]+)")?.n // empty')"
-            if [ -n "${PR_NUM_FROM_MSG}" ]; then
-              PR_JSON="$(gh "https://api.github.com/repos/${owner}/${repo}/pulls/${PR_NUM_FROM_MSG}")"
+          if [ -z "$${PR_JSON}" ] || [ "$${PR_JSON}" = "null" ]; then
+            PR_NUM_FROM_MSG="$(echo "$${COMMIT_JSON}" | jq -r '.commit.message | capture("Merge pull request #(?<n>[0-9]+)")?.n // empty')"
+            if [ -n "$${PR_NUM_FROM_MSG}" ]; then
+              PR_JSON="$(gh "https://api.github.com/repos/$${owner}/$${repo}/pulls/$${PR_NUM_FROM_MSG}")"
             fi
           fi
         fi
 
-        # Build details section if we have a PR
         GIT_INFO_SECTION=""
         DETAILS=""
-        if [ -n "${PR_JSON}" ] && [ "${PR_JSON}" != "null" ]; then
-          PR_NUMBER="$(echo "${PR_JSON}" | jq -r '.number // empty')"
-          PR_MERGED_AT="$(echo "${PR_JSON}" | jq -r '.merged_at // empty')"
-          PR_BASE="$(echo "${PR_JSON}" | jq -r '.base.ref // empty')"
-          if [ -n "${PR_NUMBER}" ] && [ -n "${PR_MERGED_AT}" ] && [ "${PR_BASE}" = "${BRANCH_NAME}" ]; then
-            PR_TITLE="$(echo "${PR_JSON}" | jq -r '.title // "-"')"
-            PR_DESCRIPTION="$(echo "${PR_JSON}" | jq -r '.body // "-"')"
-            PR_SOURCE="$(echo "${PR_JSON}" | jq -r '.head.ref // "-"')"
-            PR_TARGET="$(echo "${PR_JSON}" | jq -r '.base.ref // "-"')"
-            PR_AUTHOR_LOGIN="$(echo "${PR_JSON}" | jq -r '.user.login // "-"')"
+        if [ -n "$${PR_JSON}" ] && [ "$${PR_JSON}" != "null" ]; then
+          PR_NUMBER="$(echo "$${PR_JSON}" | jq -r '.number // empty')"
+          PR_MERGED_AT="$(echo "$${PR_JSON}" | jq -r '.merged_at // empty')"
+          PR_BASE="$(echo "$${PR_JSON}" | jq -r '.base.ref // empty')"
+          if [ -n "$${PR_NUMBER}" ] && [ -n "$${PR_MERGED_AT}" ] && [ "$${PR_BASE}" = "$${BRANCH_NAME}" ]; then
+            PR_TITLE="$(echo "$${PR_JSON}" | jq -r '.title // "-"')"
+            PR_DESCRIPTION="$(echo "$${PR_JSON}" | jq -r '.body // "-"')"
+            PR_SOURCE="$(echo "$${PR_JSON}" | jq -r '.head.ref // "-"')"
+            PR_TARGET="$(echo "$${PR_JSON}" | jq -r '.base.ref // "-"')"
+            PR_AUTHOR_LOGIN="$(echo "$${PR_JSON}" | jq -r '.user.login // "-"')"
 
-            PR_AUTHOR_NAME="$(gh "https://api.github.com/users/${PR_AUTHOR_LOGIN}" | jq -r '.name // empty')"
-            [ -z "${PR_AUTHOR_NAME}" ] && PR_AUTHOR_NAME="${PR_AUTHOR_LOGIN}"
+            PR_AUTHOR_NAME="$(gh "https://api.github.com/users/$${PR_AUTHOR_LOGIN}" | jq -r '.name // empty')"
+            [ -z "$${PR_AUTHOR_NAME}" ] && PR_AUTHOR_NAME="$${PR_AUTHOR_LOGIN}"
 
-            PR_DESCRIPTION_FORMATTED="$(printf "%s" "${PR_DESCRIPTION}" | sed 's/^/  /' | sed ':a;N;$!ba;s/\n/\\n/g')"
+            PR_DESCRIPTION_FORMATTED="$(printf "%s" "$${PR_DESCRIPTION}" | sed 's/^/  /' | sed ':a;N;$!ba;s/\n/\\n/g')"
 
-            DETAILS="\n- **PR Title**: ${PR_TITLE}\\n- **PR Number**: #${PR_NUMBER}\\n- **PR Description**: \\n\\n${PR_DESCRIPTION_FORMATTED}\\n- **PR Author**: ${PR_AUTHOR_NAME}\\n- **From**: ${PR_SOURCE} → ${PR_TARGET}"
-            ESCAPED_DETAILS="$(printf '%s' "${DETAILS}" | jq -R | jq -s -r 'join("\\n")')"
-            GIT_INFO_SECTION="{ \"activityTitle\": \"PR Details\", \"text\": \"${ESCAPED_DETAILS}\" },"
+            DETAILS="\n- **PR Title**: $${PR_TITLE}\\n- **PR Number**: #$${PR_NUMBER}\\n- **PR Description**: \\n\\n$${PR_DESCRIPTION_FORMATTED}\\n- **PR Author**: $${PR_AUTHOR_NAME}\\n- **From**: $${PR_SOURCE} → $${PR_TARGET}"
+            ESCAPED_DETAILS="$(printf '%s' "$${DETAILS}" | jq -R | jq -s -r 'join("\\n")')"
+            GIT_INFO_SECTION="{ \"activityTitle\": \"PR Details\", \"text\": \"$${ESCAPED_DETAILS}\" },"
           fi
         fi
 
@@ -136,10 +130,10 @@ steps:
           FAIL_REASON="$(cat /workspace/failure_marker)"
           curl -sS -X POST -H "Content-Type: application/json" \
             -d "{\n                \"@type\": \"MessageCard\",\n                \"@context\": \"http://schema.org/extensions\",\n                \"summary\": \"Deployment Failure\",\n                \"themeColor\": \"FF0000\",\n                \"title\": \"❌ Deployment failed for FE '${_ENV}' environment\",\n                \"sections\": [\n                  { \"activityTitle\": \"Failure Details\",\n                    \"text\": \"- **Environment**: ${_ENV}\\n- **Project**: ${_PROJECT_ID}\\n- **Service**: ${_SERVICE_NAME}\\n- **Version**: ${SHORT_SHA}\\n- **Reason**: ${FAIL_REASON}\"\n                  },\n                  { \"activityTitle\": \"Status\",\n                    \"text\": \"Deployment Failed. [Build Logs](${LOGS_URL})\"\n                  }\n                ]\n              }" \
-            "${TEAMS_WEBHOOK_URL_FAILURE}" >/dev/null || true
+            "$${TEAMS_WEBHOOK_URL_FAILURE}" >/dev/null || true
         else
           curl -sS -X POST -H "Content-Type: application/json" \
             -d "{\n                \"@type\": \"MessageCard\",\n                \"@context\": \"http://schema.org/extensions\",\n                \"summary\": \"Deployment Notification\",\n                \"themeColor\": \"00FF00\",\n                \"title\": \"✅ New version deployed to FE ${_ENV} environment\",\n                \"sections\": [\n                  { \"activityTitle\": \"Deployment Details\",\n                    \"text\": \"- **Environment**: ${_ENV}\\n- **Project**: ${_PROJECT_ID}\\n- **Service**: ${_SERVICE_NAME}\\n- **Version**: ${SHORT_SHA}\\n- **Logs**: [${CB_BUILD_ID}](${LOGS_URL})\"\n                  },\n                  ${GIT_INFO_SECTION}
                   { \"activityTitle\": \"Status\",\n                    \"text\": \"Deployment completed successfully.\"\n                  }\n                ]\n              }" \
-            "${TEAMS_WEBHOOK_URL}" >/dev/null || true
+            "$${TEAMS_WEBHOOK_URL}" >/dev/null || true
         fi
