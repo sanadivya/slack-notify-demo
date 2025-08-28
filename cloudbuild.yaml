@@ -44,9 +44,9 @@ steps:
       - 'REPO_OWNER=$${_REPO_OWNER}'
       - 'REPO_NAME=$${_REPO_NAME}'
     secretEnv:
-      - GITHUB_TOKEN
-      - TEAMS_WEBHOOK_URL
-      - TEAMS_WEBHOOK_URL_FAILURE
+      - SLACK_GITHUB_TOKEN
+      - SLACK_WEBHOOK_URL
+      - SLACK_WEBHOOK_URL_FAILURE
     args:
       - -c
       - |
