@@ -31,7 +31,7 @@ steps:
   - name: "ubuntu:22.04"
     id: Notify
     entrypoint: "bash"
-    waitFor: ["Build", "Push", "Deploy"]
+    waitFor: ["Build", "Push"]
     allowFailure: true
     # Map Cloud Build substitutions to environment variables for the script
     env:
