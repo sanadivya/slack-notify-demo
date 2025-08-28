@@ -41,8 +41,8 @@ steps:
       - 'CB_REPO=$REPO_NAME'
       - 'CB_BUILD_ID=$BUILD_ID'
       - 'CB_PROJECT_ID=$PROJECT_ID'
-      - 'REPO_OWNER=$${_REPO_OWNER}'
-      - 'REPO_NAME=$${_REPO_NAME}'
+      - 'REPO_OWNER=sanadivya
+      - 'REPO_NAME=slack-notify-demo
     secretEnv:
       - SLACK_GITHUB_TOKEN
       - SLACK_WEBHOOK_URL
